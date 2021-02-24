@@ -1,0 +1,58 @@
+version: '3.7'
+
+networks:
+  default:
+    driver: bridge
+
+services:
+  web:
+    build: docker
+    working_dir: /var/www
+    restart: always
+    container_name: php
+    networks:
+      - default
+    depends_on:
+      - mysql
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - .:/var/www
+      - docker/php/php.ini:/usr/local/etc/php/conf.d/99-php.ini
+      - docker/apache/vhosts/localhost.conf:/etc/apache2/sites-available/000-default.conf
+      - docker/apache/vhosts/localhost-ssl.conf:/etc/apache2/sites-available/default-ssl.conf
+    environment:
+      - COMPOSER_ALLOW_SUPERUSER=1
+      - DOCUMENT_ROOT=/var/www/public_html
+      - APACHE_LOG_DIR=/var/www/docker/apache/logs
+
+  mysql:
+    image: mysql:8
+    tty: true
+    restart: always
+    container_name: mysql
+    networks:
+      - default
+    ports:
+      - '3306:3306'
+    volumes:
+      - 'docker/mysql/config/mysql.cnf:/etc/mysql/conf.d/custom.cnf:ro'
+      - 'docker/mysql/database:/var/lib/mysql'
+    environment:
+      - MYSQL_PASSWORD=root
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=dev
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    networks:
+      - default
+    depends_on:
+      - mysql
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+    ports:
+      - '8080:80'
